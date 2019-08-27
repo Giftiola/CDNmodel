@@ -20,16 +20,15 @@ public class FileTransferClient implements  Runnable {
 	public static int BUFFER_SIZE;
 	private static int port;
 	private static String path;
-	private static int Timeout;
-	private int procenat = 0;
-	public boolean konekcija = true;
+	//private static int Timeout;
+	public int procenat = 0;
+	public boolean konekcija = false;
 
-    public FileTransferClient(int port, int BUFFER_SIZE,String path, int Timeout) {
+    public FileTransferClient(int port, int BUFFER_SIZE,String path) {
     	
     	this.BUFFER_SIZE = BUFFER_SIZE;
     	this.port = port;
     	this.path = path;
-    	this.Timeout = Timeout;
     	this.procenat = procenat;
     	
     }
@@ -43,7 +42,7 @@ public class FileTransferClient implements  Runnable {
 		try {
 			
 			    socket.connect(address);
-			    socket.setSoTimeout(this.Timeout);// Timeout. Za koliko milisekundi client soket se zatvara ako ne dobije podatke kada se poveze sa serverom
+			    //socket.setSoTimeout(this.Timeout);// Timeout. Za koliko milisekundi client soket se zatvara ako ne dobije podatke kada se poveze sa serverom
 			
 			    byte[] buffer;
                 buffer = new byte[this.BUFFER_SIZE];
@@ -57,7 +56,7 @@ public class FileTransferClient implements  Runnable {
                 
                 int len = 0;
                 while((len = in.read(buffer)) > 0){
-            	
+                	
                     if(MAX_CAPACITY - current >= size){
                     	current += size;
                     	procenat = (current*100)/MAX_CAPACITY;  
@@ -71,6 +70,7 @@ public class FileTransferClient implements  Runnable {
                     //buffer = new byte[size]; 
                     //bis.read(contents, 0, size); 
                     out.write(buffer,0,len);
+                    konekcija = true;
                 }
             
                 System.out.println(" "+(current*100)/MAX_CAPACITY+"%");

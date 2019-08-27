@@ -19,6 +19,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*; 
 import java.util.concurrent.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class FileTransferServer {
 	
@@ -26,11 +31,19 @@ public class FileTransferServer {
 	private static int BUFFER_SIZE;
 	private static int port;
 	private static String path;
-
+	private static int MaxOpt;
+	public static int BrojKlijenata = 0;
+	public static ThreadPoolExecutor pool = new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,new SynchronousQueue<Runnable>(),new ThreadPoolExecutor.AbortPolicy());
+	
     public FileTransferServer(int port, int BUFFER_SIZE, String path) {
     	this.port = port;
     	this.BUFFER_SIZE = BUFFER_SIZE;
+    	//this.MaxOpt = MaxOpt;
     	this.path = path;
+    }
+    
+    public int brojKlijenata() {
+    	return pool.getPoolSize();
     }
     
 	//Modifikovani ImputStream koji sluzi za ogranjicavanje protoka podataka sa servera (ogranicen download)
@@ -82,24 +95,26 @@ public class FileTransferServer {
     public void start() {
     	
     	//public final static int PORT = 9000;
-    	
-    	ExecutorService pool = Executors.newFixedThreadPool(2);
-    	
-    	try(ServerSocket server = new ServerSocket(this.port)){
+    	//ExecutorService pool = Executors.newFixedThreadPool(2);
+    	try(ServerSocket server = new ServerSocket(this.port)) {
     		
     		while(true){
-    			try{
+    			try {
     				Socket connection = server.accept();
     				Callable<Void> task = new FileTransferTask(connection);
-    				pool.submit(task);
-    				
+    				pool.submit(task); 
+    				//Future<Integer> future = pool.submit(task);
+    				//Integer BrojKlijenata = future.get();
+    				//System.out.println (pool.getPoolSize());
+    				//System.out.println("trenutni broj klijenata: "+BrojKlijenata);
     			}catch (IOException ex){
     				
     			}
     		}
     	}catch (IOException ex){
-    		System.err.println("Couldn't start server"); 
+    		System.err.println("Couldn't start server!"); 
     	}
+    	
     }
     
     private static class FileTransferTask implements Callable<Void> {
@@ -108,6 +123,7 @@ public class FileTransferServer {
     	private final int BufferSize = BUFFER_SIZE;
     	private final String PATH = path;
     	
+    	
     		
     	FileTransferTask(Socket connection){
     			this.connection = connection;
@@ -115,16 +131,19 @@ public class FileTransferServer {
     		
     	@Override
     	public Void call() throws IOException {
+    		//BrojKlijenata = 0;
     		
     		try{
     			byte[] buffer;
     			buffer = new byte[this.BufferSize];
-    			System.out.println(this.BufferSize);
-    			System.out.println(BUFFER_SIZE);
+    			//System.out.println(this.BufferSize);
+    			//System.out.println(BUFFER_SIZE);
     			File file = new File(this.PATH);
     			BufferedInputStream in = new BufferedInputStream(new CustomInputStream(new FileInputStream(file)));
     			BufferedOutputStream out = new BufferedOutputStream(connection.getOutputStream());
     			
+    			BrojKlijenata++;
+    			//System.out.println();
     			int len = 0;
     			while (((len = in.read(buffer)) > 0)) {
     				out.write(buffer, 0, len);
@@ -135,6 +154,8 @@ public class FileTransferServer {
     		}
     		finally{
     			try{
+    				BrojKlijenata--;
+    				//System.out.println(BrojKlijenata);
     				connection.close();
     			}catch (IOException ex){
     				//nebitno
